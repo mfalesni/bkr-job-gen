@@ -1,0 +1,52 @@
+{
+    "whiteboard": "Sample job using bkr_job_gen",
+    "recipes":
+    [
+        {
+            "ks_meta": "method_nfs",
+            "autopick": "false",
+            "watchdog": "None",
+            "distro":
+            [
+                {
+                    "and":
+                    [
+                            {"name": "=RHEL-6.3"},
+                            {"arch": "=x86_64"},
+                            {"variant": "=Server"}
+                    ]
+                }
+            ],
+            "host":
+            {
+                "hostname": "=somehost.name.com"
+            },
+            "tasks":
+            [
+                {
+                    "name": "/distribution/install"
+                },
+                {
+                    "name": "/some/nice/task",
+                    "params":
+                    {
+                        "YUM_RELEASEVER": "6.3",
+                        "PARAM1": "value1",
+                        "SOME_HOSTNAME": "some.host.name.eu",
+                        "CUSTOM_REPOS": "somerepo1 somerepo2",
+                    }
+                },
+                {
+                    "name": "/distribution/reservesys",
+                    "params":
+                    {
+                        "RESERVETIME": "7d"
+                    }
+                },
+                {
+                    "name": "/some/next/nice/task"
+                }
+            ]
+        }
+    ]
+}

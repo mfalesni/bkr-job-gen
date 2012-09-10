@@ -17,7 +17,7 @@ It should be able to do more things in close future, but it does only these thin
 
 Synopsis (main):
 ================
-./bkr_job_gen.py <command1> <command2> ... <commandN>
+./bkr_job_gen.py command1 command2 ... commandN
 
 Synopsis (command):
 ===================

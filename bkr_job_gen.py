@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
 # It's not the prettiest, it's not the best, but it works
-# help: https://docspace.corp.redhat.com/docs/DOC-115749
 # Milan Falesnik <mfalesni@redhat.com>
 
 import json

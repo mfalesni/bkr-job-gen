@@ -31,8 +31,9 @@ class InvalidXMLException(Exception):
     pass
 
 class BeakerInterface(object):
-    def __init__(self, user, password):
-        self.credentials = (user, password)
+    def __init__(self):
+        self.user = None
+        self.password = None
         
     def __run(self, cmd):
         if isinstance(cmd, str):
@@ -47,10 +48,14 @@ class BeakerInterface(object):
         return stdout
 
     def setCredentials(self, user, password):
-        self.credentials = (user, password)
+        self.user = user
+        self.password = password
 
     def jobSubmit(self, jobxmlfile):
-        result = self.__run("bkr job-submit %s" % (jobxmlfile))
+        if self.user == None or self.password == None:
+            result = self.__run("bkr job-submit %s" % (jobxmlfile))
+        else:
+            result = self.__run("bkr job-submit %s --username '%s' --password '%s'" % (jobxmlfile, self.user, self.password))
         result = result.split(":", 1)[-1].strip()
         result = eval(result)
         result = [int(x.rsplit(":", 1)[-1]) for x in result]
@@ -132,7 +137,8 @@ class BeakerJobSubmitApplication(Application):
         f = open(xmlfile, "w")
         f.write(xml.xmlRepresentation())
         f.close()
-        ifc = BeakerInterface(name, password)
+        ifc = BeakerInterface()
+        ifc.setCredentials(name, password)
         jobs = ifc.jobSubmit(xmlfile)
         os.unlink(xmlfile)
         #TODO: More jobs simultaneously

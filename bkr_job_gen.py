@@ -8,6 +8,135 @@ import re
 import sys
 from xml.etree.cElementTree import Element, ElementTree
 from StringIO import StringIO
+import subprocess
+import shlex
+import pkg_resources
+import sys
+import bkr_job_gen
+import os
+import os.path
+from StringIO import StringIO
+from random import random
+from lxml import etree
+
+# XML SUBMITTER
+
+class RuntimeErrorException(Exception):
+    pass
+
+class InvalidXMLException(Exception):
+    pass
+
+class BeakerInterface(object):
+    def __init__(self, user, password):
+        self.credentials = (user, password)
+        
+    def __run(self, cmd):
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd)
+        p_open = subprocess.Popen(cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT)
+        (stdout, stderr) = p_open.communicate()
+        if p_open.returncode != 0:
+            print stdout
+            raise RuntimeErrorException()
+        return stdout
+
+    def setCredentials(self, user, password):
+        self.credentials = (user, password)
+
+    def jobSubmit(self, jobxmlfile):
+        result = self.__run("bkr job-submit %s" % (jobxmlfile))
+        result = result.split(":", 1)[-1].strip()
+        result = eval(result)
+        result = [int(x.rsplit(":", 1)[-1]) for x in result]
+        return result
+
+    def jobGet(self, jobid):
+        string = StringIO(self.__run("bkr job-results J:%d" % jobid))
+        return etree.parse(string)
+
+    def jobTasks(self, jobid):
+        tree = self.jobGet(jobid)
+        return tree.xpath("//task")
+
+    def tasksDiffer(self, old, new):
+        tests = zip(old, new)
+        for test in tests:
+            if test[0][1] != test[1][1] or test[0][2] != test[1][2]:
+                return True
+        return False
+
+    def printTasks(self, tasks):
+        longest = 0
+        for task in tasks:
+            if len(task[0]) > longest:
+                longest = len(task[0])
+        print "%s%s%s" % ("Task name:".rjust(longest), "Status:".rjust(10), "Result:".rjust(10))
+        for i in range(longest + 10 + 10):
+            print "~",
+        print ""
+        fmtstr = "%%%ds%%10s%%10s" % longest
+        for task in tasks:
+            print fmtstr % (task[0].rjust(longest), task[1].rjust(10), task[2].rjust(10))
+
+    def formatTasks(self, xmltasks):
+        return [(xmltask.get("name"), xmltask.get("status"), xmltask.get("result")) for xmltask in xmltasks]
+
+    def isClosure(self, tasks, closure):
+        for task in tasks:
+            if task[0] == closure:
+                if task[1] == "Running":
+                    return True
+        return False
+
+    def isCancelled(self, tasks):
+        for task in tasks:
+            if task[1] == "Cancelled":
+                return True
+        return False
+
+    def monitorTasks(self, jobid, closure="/distribution/reservesys"):
+        tasks = self.formatTasks(self.jobTasks(jobid))
+        while not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
+            newtasks = self.formatTasks(self.jobTasks(jobid))
+            if self.tasksDiffer(tasks, newtasks):
+                self.printTasks(newtasks)
+                tasks = newtasks
+        if self.isCancelled(tasks):
+            return False
+        else:
+            return True
+
+class Application(object):
+    def random(self):
+        return int(random()*10000)
+
+    def tmpFileName(self):
+        prefix = self.__class__.__name__
+        name = "/tmp/%s" % prefix
+        while os.path.exists(name):
+            name = "/tmp/%s-%d" % (prefix, self.random())
+        return name
+
+
+class BeakerJobSubmitApplication(Application):
+    def __init__(self, name, password, xml, closure):
+        print "Username: %s" % name
+        print "Password: %s" % password
+        assert xml != None
+        xmlfile = self.tmpFileName()
+        f = open(xmlfile, "w")
+        f.write(xml.xmlRepresentation())
+        f.close()
+        ifc = BeakerInterface(name, password)
+        jobs = ifc.jobSubmit(xmlfile)
+        os.unlink(xmlfile)
+        #TODO: More jobs simultaneously
+        return ifc.monitorTasks(jobs[0], closure)
+
+# XML GENERATOR
 
 class UnknownHostRequirementException(Exception):
     def __init__(self, req):
@@ -550,12 +679,14 @@ class BeakerJSONBuilder(object):
 
 def main(argv):
     argv.reverse()
-    argv = argv[:-1]
     # Priklady:
     # ./bkr_job_gen.py load job.json task "/CloudForms/Installation/CloudEngine" param set "YUM_RELEASEVER" "6.2" param delete CF_CUSTOM_REPOS print
     job = None
     currentRecipe = 0
     currentTask = None
+    username = None
+    password = False
+    closure = None
     while len(argv) > 0:
         command = argv.pop()
         if command == "load":
@@ -567,6 +698,30 @@ def main(argv):
                 raise Exception("You must provide file name to import!")
             except IOError:
                 raise Exception("Input file does not exist!")
+        elif command == "user":
+            # Set user name
+            try:
+                username = argv.pop()
+            except IndexError:
+                raise Exception("You must provide user name to set!")
+        elif command == "pass":
+            # Set user password
+            try:
+                password = argv.pop()
+            except IndexError:
+                raise Exception("You must provide user password to set!")
+        elif command == "closure":
+            # Set closure job
+            try:
+                closure = argv.pop()
+            except IndexError:
+                raise Exception("You must provide closure name where to stop!")
+        elif command == "submit-watch":
+            # Submit and watch job
+            try:
+                app = BeakerJobSubmitApplication(username, password, job, closure)
+            except AttributeError:
+                raise Exception("You must load JSON at first!")
         elif command == "print":
             try:
                 print job.xmlRepresentation()
@@ -727,7 +882,7 @@ def main(argv):
                 raise Exception("Unknown subcommand %s for %s" % (subcommand, command))
         else:
             raise Exception("Unknown command %s" % command)
-    exit(0)
+    return job
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main(sys.argv[1:])

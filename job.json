@@ -33,7 +33,7 @@
                         "YUM_RELEASEVER": "6.3",
                         "PARAM1": "value1",
                         "SOME_HOSTNAME": "some.host.name.eu",
-                        "CUSTOM_REPOS": "somerepo1 somerepo2",
+                        "CUSTOM_REPOS": "somerepo1 somerepo2"
                     }
                 },
                 {

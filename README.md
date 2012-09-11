@@ -44,7 +44,9 @@ Examples:
 
 Commands task and recipe don't have to be specified every time using them-dependent commands (param, requires, ...), they are simply valid until overrided with next task or recipe command. Imagine them as simple variables you have available. When you issue load command, all changes you made before are lost and you're starting from clean loaded template.
 
-IMPORTANT THING!!! This thing works only pre-made JSON templates, it can't generate new XML from nothing. I decided to make it this way because:
+IMPORTANT THING!!! This thing is imperative, so commands are readed and processed sequentially as they are readed from the parameters. so putting submit-watch in the beginning is not a good idea.
+
+ANOTHER IMPORTANT THING!!! This thing works only pre-made JSON templates, it can't generate new XML from nothing. I decided to make it this way because:
 
 1. JSON is much simpler than XML
 2. Tasks used inside some testing suite usually have many common parameters, so it's better to have some basic stuff you can modify (inheritance -> good practice )

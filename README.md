@@ -22,18 +22,25 @@ Synopsis (main):
 Synopsis (command):
 ===================
 
-    load <json-file> ### Load JSON template
-    print ### Print out the XML
-    kickstart <file-with-kickstart> ### Attach kickstart file for specified recipe
-    recipe <seq. # of recipe in recipeset> ### Select recipe from recipeset for next operations, default 0 (first recipe)
-    task <task-name> ### Select task with specified name in selected recipe for next operations
-    param set|delete <task-param-name> [param-value if set] ### Change parameters passed to tasks
-    requires host|distro <req-name> set|delete [req-value if set] (format of req-value is: "<op><value>", so f.e. "=RHEL-6.3" or ">4096") ### This speaks for itself, but when using "distro", you don't have to write the "distro" or "distro_" prefix
+- load 'json-file' ### Load JSON template
+- print ### Print out the XML
+- kickstart 'file-with-kickstart' ### Attach kickstart file for specified recipe
+- recipe 'seq. # of recipe in recipeset' ### Select recipe from recipeset for next operations, default 0 (first recipe)
+- task 'task-name' ### Select task with specified name in selected recipe for next operations
+- param set|delete 'task-param-name' 'param-value if set' ### Change parameters passed to tasks
+- requires host|distro 'req-name' set|delete 'req-value if set' (format of req-value is: "opvalue", so f.e. "=RHEL-6.3" or ">4096") ### This speaks for itself, but when using "distro", you don't have to write the "distro" or "distro_" prefix
+- user 'username' ### Specify Beaker user name
+- pass 'password' ### Specify Beaker password
+- summary ### Prints out simple summary of the entered XML
+- submit-watch ### Submits the XML into Beaker and starts watching te tasks until closure (or Cancelled) reached
+- closure 'taskname' ### Task which when starts, detaches from the submit-watch operation
 
 Examples:
 =========
 
 ./bkr_job_gen.py load job.json task "/CloudForms/Installation/CloudEngine" param set YUM_RELEASEVER 6.2 task "/distribution/reservesys" param set RESERVETIME 2d recipe 0 (<- this command isn't actually needed, as it is 0 by default) kickstart kickstart.txt requires host hostname set "troll.pc.com" print
+
+./bkr_job_gen.py load job.json task "/CloudForms/Installation/CloudEngine" param set YUM_RELEASEVER 6.2 task "/distribution/reservesys" param set RESERVETIME 2d recipe 0 (<- this command isn't actually needed, as it is 0 by default) kickstart kickstart.txt requires host hostname set "troll.pc.com" summary name "username" pass "password" closure "/some/task" submit-watch
 
 Commands task and recipe don't have to be specified every time using them-dependent commands (param, requires, ...), they are simply valid until overrided with next task or recipe command. Imagine them as simple variables you have available. When you issue load command, all changes you made before are lost and you're starting from clean loaded template.
 

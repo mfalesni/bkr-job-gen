@@ -6,7 +6,7 @@
 import json
 import re
 import sys
-from xml.etree.cElementTree import Element, ElementTree
+#from xml.etree.cElementTree import Element, ElementTree
 from StringIO import StringIO
 import subprocess
 import shlex
@@ -18,6 +18,7 @@ import os.path
 from StringIO import StringIO
 from random import random
 from lxml import etree
+from cdata_monkeypatch import *
 
 def stderr(string):
     sys.stderr.write("%s\n" % string)
@@ -413,7 +414,8 @@ class BeakerRecipeKickstart(BeakerBaseObject):
 
     def toXMLNode(self):
         kickstart = Element("kickstart")
-        kickstart.text = self.kickstart
+        kickstart.append(CDATA(self.kickstart))
+        #kickstart.text = self.kickstart
         return kickstart
 
 class BeakerRecipe(BeakerBaseObject):

@@ -19,6 +19,9 @@ from StringIO import StringIO
 from random import random
 from lxml import etree
 
+def stderr(string):
+    sys.stderr.write("%s\n" % string)
+
 # XML SUBMITTER
 
 class RuntimeErrorException(Exception):
@@ -74,12 +77,10 @@ class BeakerInterface(object):
             if len(task[0]) > longest:
                 longest = len(task[0])
         print "%s%s%s" % ("Task name:".rjust(longest), "Status:".rjust(10), "Result:".rjust(10))
-        for i in range(longest + 10 + 10):
-            print "~",
-        print ""
         fmtstr = "%%%ds%%10s%%10s" % longest
         for task in tasks:
             print fmtstr % (task[0].rjust(longest), task[1].rjust(10), task[2].rjust(10))
+        print ""
 
     def formatTasks(self, xmltasks):
         return [(xmltask.get("name"), xmltask.get("status"), xmltask.get("result")) for xmltask in xmltasks]
@@ -99,11 +100,12 @@ class BeakerInterface(object):
 
     def monitorTasks(self, jobid, closure="/distribution/reservesys"):
         tasks = self.formatTasks(self.jobTasks(jobid))
+        self.printTasks(tasks)
         while not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
             newtasks = self.formatTasks(self.jobTasks(jobid))
             if self.tasksDiffer(tasks, newtasks):
                 self.printTasks(newtasks)
-                tasks = newtasks
+            tasks = newtasks
         if self.isCancelled(tasks):
             return False
         else:
@@ -134,7 +136,7 @@ class BeakerJobSubmitApplication(Application):
         jobs = ifc.jobSubmit(xmlfile)
         os.unlink(xmlfile)
         #TODO: More jobs simultaneously
-        return ifc.monitorTasks(jobs[0], closure)
+        self.result = ifc.monitorTasks(jobs[0], closure)
 
 # XML GENERATOR
 
@@ -536,6 +538,30 @@ class BeakerJob(BeakerBaseObject):
         doc.write(io)
         return io.getvalue()
 
+    def summary(self):
+        summary = ""
+        # Whiteboard
+        summary += "Whiteboard: '%s'\n" % self.whiteboard
+        recipe_num = 0
+        for recipe in self.recipeset.recipes:
+            summary += "Recipe #%d:\n" % recipe_num
+            summary += "  |\n"
+            summary += "  +-> Whiteboard: '%s'\n" % recipe.whiteboard
+            summary += "  |\n"
+            summary += "  +-> Tasks:\n"
+            task_num = 0
+            for task in recipe.tasks:
+                summary += "  |    |\n"
+                summary += "  |    +-> Task #%d: '%s'\n" % (task_num, task.name)
+                for param in task.params:
+                    summary += "  |    |    |\n"
+                    summary += "  |    |    +-> '%s': '%s'\n" % (param.name, param.value)
+
+                task_num += 1
+            summary += "  |\n  ^\n"
+            recipe_num +=1
+        return summary
+
 class BeakerJSONBuilder(object):
     """ Builds the tree from XML file or string """
 
@@ -692,6 +718,7 @@ def main(argv):
         if command == "load":
             # Load json file
             try:
+                stderr("Loading JSON file ...")
                 builder = BeakerJSONBuilder(argv.pop())
                 job = builder.getJob()
             except IndexError:
@@ -718,6 +745,7 @@ def main(argv):
                 raise Exception("You must provide closure name where to stop!")
         elif command == "submit-watch":
             # Submit and watch job
+            stderr("Submitting job into Beaker ...")
             try:
                 app = BeakerJobSubmitApplication(username, password, job, closure)
             except AttributeError:
@@ -725,6 +753,11 @@ def main(argv):
         elif command == "print":
             try:
                 print job.xmlRepresentation()
+            except AttributeError:
+                raise Exception("You must load the JSON file at first!")
+        elif command == "summary":
+            try:
+                print job.summary()
             except AttributeError:
                 raise Exception("You must load the JSON file at first!")
         elif command == "kickstart":

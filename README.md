@@ -28,7 +28,7 @@ Synopsis (command):
 - recipe 'seq. # of recipe in recipeset' ### Select recipe from recipeset for next operations, default 0 (first recipe)
 - task 'task-name' ### Select task with specified name in selected recipe for next operations
 - param set|delete 'task-param-name' 'param-value if set' ### Change parameters passed to tasks
-- requires host|distro 'req-name' set|delete 'req-value if set' (format of req-value is: "opvalue", so f.e. "=RHEL-6.3" or ">4096") ### This speaks for itself, but when using "distro", you don't have to write the "distro" or "distro_" prefix
+- requires host|distro 'req-name' set|delete 'req-value if set' (format of req-value is: "opvalue", so f.e. "=RHEL-6.3" or ">4096") ### This speaks for itself, but when using "distro", you don't have to write the "distro" or "distro_" prefix. If you set the key_value tags like HVM, MEMORY or so, use $-prefix -> $HVM, $MEMORY ...
 - user 'username' ### Specify Beaker user name
 - pass 'password' ### Specify Beaker password
 - summary ### Prints out simple summary of the entered XML

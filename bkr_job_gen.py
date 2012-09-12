@@ -6,7 +6,7 @@
 import json
 import re
 import sys
-#from xml.etree.cElementTree import Element, ElementTree
+#from xml.etree.cElementTree import *
 from StringIO import StringIO
 import subprocess
 import shlex
@@ -17,8 +17,7 @@ import os
 import os.path
 from StringIO import StringIO
 from random import random
-from lxml import etree
-from cdata_monkeypatch import *
+from lxml.etree import *
 
 def stderr(string):
     sys.stderr.write("%s\n" % string)
@@ -35,6 +34,8 @@ class BeakerInterface(object):
     def __init__(self):
         self.user = None
         self.password = None
+        self.jobtree = None
+        self.hostname = None
         
     def __run(self, cmd):
         if isinstance(cmd, str):
@@ -62,13 +63,19 @@ class BeakerInterface(object):
         result = [int(x.rsplit(":", 1)[-1]) for x in result]
         return result
 
-    def jobGet(self, jobid):
+    def jobDownload(self, jobid):
         string = StringIO(self.__run("bkr job-results J:%d" % jobid))
-        return etree.parse(string)
+        self.jobtree = parse(string)
 
-    def jobTasks(self, jobid):
-        tree = self.jobGet(jobid)
-        return tree.xpath("//task")
+    def jobTasks(self):
+        return self.jobtree.xpath("//task")
+
+    def jobHostName(self):
+        hostname = self.jobtree.xpath("//recipe/@system")
+        if type(hostname) == list and len(hostname) > 0:
+            return " ".join(hostname)
+        else:
+            return None
 
     def tasksDiffer(self, old, new):
         tests = zip(old, new)
@@ -94,7 +101,7 @@ class BeakerInterface(object):
     def isClosure(self, tasks, closure):
         for task in tasks:
             if task[0] == closure:
-                if task[1] == "Running":
+                if task[1] in  ["Running", "Failed"]:
                     return True
         return False
 
@@ -105,13 +112,22 @@ class BeakerInterface(object):
         return False
 
     def monitorTasks(self, jobid, closure="/distribution/reservesys"):
-        tasks = self.formatTasks(self.jobTasks(jobid))
+        self.jobDownload(jobid)
+        tasks = self.formatTasks(self.jobTasks())
         self.printTasks(tasks)
         while not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
-            newtasks = self.formatTasks(self.jobTasks(jobid))
+            self.jobDownload(jobid)
+            newtasks = self.formatTasks(self.jobTasks())
             if self.tasksDiffer(tasks, newtasks):
                 self.printTasks(newtasks)
-            tasks = newtasks
+                if self.hostname == None:
+                    self.hostname = self.jobHostName()
+                    if self.hostname != None:
+                        f = open("hostname", "w")
+                        print "ASSIGNED HOSTNAME:", self.hostname
+                        f.write("%s\n" % self.hostname)
+                        f.close()
+                tasks = newtasks
         if self.isCancelled(tasks):
             return False
         else:
@@ -431,7 +447,7 @@ class BeakerRecipeKickstart(BeakerBaseObject):
 
     def toXMLNode(self):
         kickstart = Element("kickstart")
-        kickstart.append(CDATA(self.kickstart))
+        kickstart.text = CDATA(self.kickstart)
         #kickstart.text = self.kickstart
         return kickstart
 
@@ -784,7 +800,7 @@ def main(argv):
             stderr("Submitting job into Beaker ...")
             try:
                 app = BeakerJobSubmitApplication(username, password, job, closure)
-            except AttributeError:
+            except AssertionError:
                 raise Exception("You must load JSON at first!")
         elif command == "print":
             try:

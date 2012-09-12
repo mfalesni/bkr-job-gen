@@ -218,8 +218,11 @@ class BeakerRecipeTaskParam(BeakerBaseObject):
 class BeakerAnd(BeakerBaseObject):
     """ Makes <and> tag """
 
-    def __init__(self, child_nodes=[]):
-        self.child_nodes = child_nodes
+    def __init__(self, child_nodes=None):
+        if child_nodes != None:
+            self.child_nodes = child_nodes
+        else:
+            self.child_nodes = []
 
     def addRequirement(self, requirement):
         if type(requirement) == list:
@@ -236,8 +239,11 @@ class BeakerAnd(BeakerBaseObject):
 class BeakerOr(BeakerBaseObject):
     """ Makes <or> tag """
 
-    def __init__(self, child_nodes=[]):
-        self.child_nodes = child_nodes
+    def __init__(self, child_nodes=None):
+        if child_nodes != None:
+            self.child_nodes = child_nodes
+        else:
+            self.child_nodes = []
 
     def addRequirement(self, requirement):
         if type(requirement) == list:
@@ -257,11 +263,17 @@ class BeakerRecipeHostRequirement(BeakerBaseObject):
     allowedOps = ["=", "<", ">", "<=", ">=", None]
     reOp = re.compile("^[<>=]+")
     def __init__(self, requirement, value):
+        self.keyvalue = False
         self.setReq(requirement, value)
 
     def setReq(self, requirement, value):
-        if requirement not in self.allowedReqs:
-            raise UnknownHostRequirementException(requirement)
+        if requirement.startswith("$"):
+            requirement = requirement[1:]
+            self.keyvalue = True
+        else:
+            self.keyvalue = False
+            if requirement not in self.allowedReqs:
+                raise UnknownHostRequirementException(requirement)
         self.req = requirement
         findOp = self.reOp.search(value)
         if findOp == None:
@@ -274,7 +286,12 @@ class BeakerRecipeHostRequirement(BeakerBaseObject):
             raise UnknownOperatorException(self.operator)
 
     def toXMLNode(self):
-        requirement = Element(self.req)
+        requirement = None
+        if not self.keyvalue:
+            requirement = Element(self.req)
+        else:
+            requirement = Element("key_value")
+            requirement.set("key", self.req)
         if self.operator != None:
             requirement.set("op", self.operator)
         requirement.set("value", self.value)

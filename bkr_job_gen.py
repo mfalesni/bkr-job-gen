@@ -102,7 +102,7 @@ class BeakerInterface(object):
     def isClosure(self, tasks, closure):
         for task in tasks:
             if task[0] == closure:
-                if task[1] in  ["Running", "Failed"]:
+                if task[1] in  ["Running", "Failed", "Completed"]:
                     return True
         return False
 

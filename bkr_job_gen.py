@@ -46,7 +46,7 @@ class BeakerInterface(object):
                         stderr=subprocess.STDOUT)
         (stdout, stderr) = p_open.communicate()
         if p_open.returncode != 0:
-            print stdout
+            stderr(stdout)
             raise RuntimeErrorException()
         return stdout
 
@@ -71,6 +71,9 @@ class BeakerInterface(object):
     def jobTasks(self):
         return self.jobtree.xpath("//task")
 
+    def jobStatus(self):
+        return self.jobtree.xpath("//job/@status")[0]
+
     def jobHostName(self):
         hostname = self.jobtree.xpath("//recipe/@system")
         if type(hostname) == list and len(hostname) > 0:
@@ -90,11 +93,11 @@ class BeakerInterface(object):
         for task in tasks:
             if len(task[0]) > longest:
                 longest = len(task[0])
-        print "%s%s%s" % ("Task name:".rjust(longest), "Status:".rjust(10), "Result:".rjust(10))
-        fmtstr = "%%%ds%%10s%%10s" % longest
+        stderr("%s%s%s\n" % ("Task name:".rjust(longest), "Status:".rjust(10), "Result:".rjust(10)))
+        fmtstr = "%%%ds%%10s%%10s\n" % longest
         for task in tasks:
-            print fmtstr % (task[0].rjust(longest), task[1].rjust(10), task[2].rjust(10))
-        print ""
+            stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(10), task[2].rjust(10)))
+        
 
     def formatTasks(self, xmltasks):
         return [(xmltask.get("name"), xmltask.get("status"), xmltask.get("result")) for xmltask in xmltasks]
@@ -126,10 +129,12 @@ class BeakerInterface(object):
                     self.hostname = self.jobHostName()
                     if self.hostname != None:
                         f = open("hostname", "w")
-                        print "ASSIGNED HOSTNAME:", self.hostname
+                        stderr("ASSIGNED HOSTNAME: %s" % self.hostname)
                         f.write("%s\n" % self.hostname)
                         f.close()
                 tasks = newtasks
+                if self.jobStatus() in ["Aborted"]:
+                    raise Exception("Job finished unsuccessfully with status %s!" % self.jobStatus)
         if self.isCancelled(tasks):
             return False
         else:
@@ -149,8 +154,8 @@ class Application(object):
 
 class BeakerJobSubmitApplication(Application):
     def __init__(self, name, password, xml, closure):
-        print "Username: %s" % name
-        print "Password: %s" % password
+        stderr("Username: %s" % name)
+        stderr("Password: %s" % password)
         assert xml != None
         xmlfile = self.tmpFileName()
         f = open(xmlfile, "w")

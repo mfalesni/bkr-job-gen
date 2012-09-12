@@ -464,13 +464,16 @@ class BeakerRecipe(BeakerBaseObject):
     def setHostReqParam(self, req, value):
         to_parse = self.hostreq.child_nodes[:]
         success = False
+        original = req
+        if req.startswith("$"):
+            req = req[1:]
         while to_parse != []:
             node = to_parse.pop()
             if type(node) == BeakerAnd or type(node) == BeakerOr:
                 to_parse.extend(node.child_nodes)
             elif type(node) == BeakerRecipeHostRequirement:
                 if node.req == req:
-                    node.setReq(req, value)
+                    node.setReq(original, value)
                     success = True
             else:
                 raise Exception("Faced unknown type in host_req -> %s" % str(type(node)))
@@ -768,6 +771,14 @@ def main(argv):
                 closure = argv.pop()
             except IndexError:
                 raise Exception("You must provide closure name where to stop!")
+        elif command == "whiteboard":
+            # Set whiteboard
+            try:
+                job.whiteboard = argv.pop()
+            except IndexError:
+                raise Exception("You must provide whiteboard text!")
+            except AttributeError:
+                raise Exception("You must load the JSON file at first!")
         elif command == "submit-watch":
             # Submit and watch job
             stderr("Submitting job into Beaker ...")

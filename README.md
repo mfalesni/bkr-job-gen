@@ -34,6 +34,7 @@ Synopsis (command):
 - summary ### Prints out simple summary of the entered XML
 - submit-watch ### Submits the XML into Beaker and starts watching te tasks until closure (or Cancelled) reached
 - closure 'taskname' ### Task which when starts, detaches from the submit-watch operation
+- whiteboard 'whiteboard-text' ### Text used for describing the job
 
 Examples:
 =========

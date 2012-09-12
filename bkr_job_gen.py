@@ -18,6 +18,7 @@ import os.path
 from StringIO import StringIO
 from random import random
 from lxml.etree import *
+from time import sleep
 
 def stderr(string):
     sys.stderr.write("%s\n" % string)
@@ -116,6 +117,7 @@ class BeakerInterface(object):
         tasks = self.formatTasks(self.jobTasks())
         self.printTasks(tasks)
         while not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
+            sleep(30)
             self.jobDownload(jobid)
             newtasks = self.formatTasks(self.jobTasks())
             if self.tasksDiffer(tasks, newtasks):

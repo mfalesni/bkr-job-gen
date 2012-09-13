@@ -105,20 +105,24 @@ class BeakerInterface(object):
             if len(task[0]) > longest:
                 longest = len(task[0])
         total = longest + 2*constant_size
-        hr(total+2)
         # Timestamp
-        stderr("Timestamp: %s" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
+        stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
         hr(total+2)
         stderr("|%s|%s|%s|" % ("Task name:".rjust(longest), "Status:".rjust(constant_size), "Result:".rjust(constant_size)))
         fmtstr = "|%%%ds|%%10s|%%10s|" % longest
         for task in tasks:
             stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(constant_size), task[2].rjust(constant_size)))
         hr(total+2)
-        stderr("")
         
 
     def formatTasks(self, xmltasks):
         return [(xmltask.get("name"), xmltask.get("status"), xmltask.get("result")) for xmltask in xmltasks]
+
+    def printHeader(self, jobid):
+        hr(60)
+        stderr("Beaker job status report (Job ID: J:%d)" % jobid)
+        stderr("https://beaker.engineering.redhat.com/jobs/%d" % jobid)
+        hr(60)
 
     def isClosure(self, tasks, closure):
         for task in tasks:
@@ -134,6 +138,7 @@ class BeakerInterface(object):
         return False
 
     def monitorTasks(self, jobid, closure="/distribution/reservesys"):
+        self.printHeader(jobid)
         self.jobDownload(jobid)
         tasks = self.formatTasks(self.jobTasks())
         self.printTasks(tasks)
@@ -148,10 +153,9 @@ class BeakerInterface(object):
                     if self.hostname != None:
                         f = open("hostname", "w")
                         stderr("")
-                        message = "ASSIGNED HOSTNAME: %s" % self.hostname
-                        hr(len(message))
+                        message = "|ASSIGNED HOSTNAME:\n|  %s|" % self.hostname
                         stderr("|%s|" % message)
-                        hr(len(message))
+                        hr(len(self.hostname)+2)
                         stderr("")
                         f.write("%s\n" % self.hostname)
                         f.close()

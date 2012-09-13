@@ -18,10 +18,16 @@ import os.path
 from StringIO import StringIO
 from random import random
 from lxml.etree import *
-from time import sleep
+from time import sleep, strftime, localtime
 
 def stderr(string):
     sys.stderr.write("%s\n" % string)
+
+def hr(length):
+    sys.stderr.write("+")
+    for i in range(length):
+        sys.stderr.write("~")
+    sys.stderr.write("+\n")
 
 # XML SUBMITTER
 
@@ -53,6 +59,10 @@ class BeakerInterface(object):
     def setCredentials(self, user, password):
         self.user = user
         self.password = password
+        if not (self.user == None or self.password == False):
+            stderr("Username: %s" % self.user)
+            stderr("Password: %s" % self.password)
+        
 
     def jobSubmit(self, jobxmlfile):
         if self.user == None or self.password == None:
@@ -90,13 +100,21 @@ class BeakerInterface(object):
 
     def printTasks(self, tasks):
         longest = 0
+        constant_size = 10
         for task in tasks:
             if len(task[0]) > longest:
                 longest = len(task[0])
-        stderr("%s%s%s\n" % ("Task name:".rjust(longest), "Status:".rjust(10), "Result:".rjust(10)))
-        fmtstr = "%%%ds%%10s%%10s\n" % longest
+        total = longest + 2*constant_size
+        hr(total+2)
+        # Timestamp
+        stderr("Timestamp: %s" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
+        hr(total+2)
+        stderr("|%s|%s|%s|" % ("Task name:".rjust(longest), "Status:".rjust(constant_size), "Result:".rjust(constant_size)))
+        fmtstr = "|%%%ds|%%10s|%%10s|" % longest
         for task in tasks:
-            stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(10), task[2].rjust(10)))
+            stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(constant_size), task[2].rjust(constant_size)))
+        hr(total+2)
+        stderr("")
         
 
     def formatTasks(self, xmltasks):
@@ -129,7 +147,12 @@ class BeakerInterface(object):
                     self.hostname = self.jobHostName()
                     if self.hostname != None:
                         f = open("hostname", "w")
-                        stderr("ASSIGNED HOSTNAME: %s" % self.hostname)
+                        stderr("")
+                        message = "ASSIGNED HOSTNAME: %s" % self.hostname
+                        hr(len(message))
+                        stderr("|%s|" % message)
+                        hr(len(message))
+                        stderr("")
                         f.write("%s\n" % self.hostname)
                         f.close()
                 tasks = newtasks
@@ -154,8 +177,6 @@ class Application(object):
 
 class BeakerJobSubmitApplication(Application):
     def __init__(self, name, password, xml, closure):
-        stderr("Username: %s" % name)
-        stderr("Password: %s" % password)
         assert xml != None
         xmlfile = self.tmpFileName()
         f = open(xmlfile, "w")

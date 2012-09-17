@@ -153,6 +153,7 @@ class BeakerInterface(object):
                     if self.hostname != None:
                         f = open("hostname", "w")
                         stderr("")
+                        stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
                         message = "|ASSIGNED HOSTNAME:\n|  %s|" % self.hostname
                         stderr("|%s|" % message)
                         hr(len(self.hostname)+2)

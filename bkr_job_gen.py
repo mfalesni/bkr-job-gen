@@ -52,7 +52,7 @@ class BeakerInterface(object):
         (stdout, stderr) = p_open.communicate()
         if p_open.returncode != 0:
             print_stderr(stdout)
-            raise RuntimeErrorException()
+            raise RuntimeErrorException("Command '%s' failed with exitcode %d" % (cmd, p_open.returncode))
         return stdout
 
     def setCredentials(self, user, password):

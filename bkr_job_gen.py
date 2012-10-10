@@ -74,8 +74,12 @@ class BeakerInterface(object):
         return result
 
     def jobDownload(self, jobid):
-        string = StringIO(self.__run("bkr job-results J:%d" % jobid))
-        self.jobtree = parse(string)
+        stdout = self.__run("bkr job-results J:%d" % jobid)
+        try:
+            self.jobtree = parse(StringIO(stdout))
+        except XMLSyntaxError:
+            raise RuntimeErrorException("Parsing of the received XML failed. Content of the xml is: '%s'" % stdout)
+
 
     def jobTasks(self):
         return self.jobtree.xpath("//task")

@@ -74,7 +74,9 @@ class BeakerInterface(object):
         return result
 
     def jobDownload(self, jobid):
-        stdout = self.__run("bkr job-results J:%d" % jobid)
+        stdout = self.__run("bkr job-results J:%d" % jobid).strip()
+        if not stdout.startswith("<"):
+            stdout = re.sub("^[^<]+", "", stdout)
         try:
             self.jobtree = parse(StringIO(stdout))
         except XMLSyntaxError:

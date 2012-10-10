@@ -12,7 +12,6 @@ import subprocess
 import shlex
 import pkg_resources
 import sys
-import bkr_job_gen
 import os
 import os.path
 from StringIO import StringIO
@@ -20,7 +19,7 @@ from random import random
 from lxml.etree import *
 from time import sleep, strftime, localtime
 
-def stderr(string):
+def print_stderr(string):
     sys.stderr.write("%s\n" % string)
 
 def hr(length):
@@ -52,7 +51,7 @@ class BeakerInterface(object):
                         stderr=subprocess.STDOUT)
         (stdout, stderr) = p_open.communicate()
         if p_open.returncode != 0:
-            stderr(stdout)
+            print_stderr(stdout)
             raise RuntimeErrorException()
         return stdout
 
@@ -60,8 +59,8 @@ class BeakerInterface(object):
         self.user = user
         self.password = password
         if not (self.user == None or self.password == False):
-            stderr("Username: %s" % self.user)
-            stderr("Password: %s" % self.password)
+            print_stderr("Username: %s" % self.user)
+            print_stderr("Password: %s" % self.password)
         
 
     def jobSubmit(self, jobxmlfile):
@@ -106,12 +105,12 @@ class BeakerInterface(object):
                 longest = len(task[0])
         total = longest + 2*constant_size
         # Timestamp
-        stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
+        print_stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
         hr(total+2)
-        stderr("|%s|%s|%s|" % ("Task name:".rjust(longest), "Status:".rjust(constant_size), "Result:".rjust(constant_size)))
+        print_stderr("|%s|%s|%s|" % ("Task name:".rjust(longest), "Status:".rjust(constant_size), "Result:".rjust(constant_size)))
         fmtstr = "|%%%ds|%%10s|%%10s|" % longest
         for task in tasks:
-            stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(constant_size), task[2].rjust(constant_size)))
+            print_stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(constant_size), task[2].rjust(constant_size)))
         hr(total+2)
         
 
@@ -120,8 +119,8 @@ class BeakerInterface(object):
 
     def printHeader(self, jobid):
         hr(60)
-        stderr("Beaker job status report (Job ID: J:%d)" % jobid)
-        stderr("https://beaker.engineering.redhat.com/jobs/%d" % jobid)
+        print_stderr("Beaker job status report (Job ID: J:%d)" % jobid)
+        print_stderr("https://beaker.engineering.redhat.com/jobs/%d" % jobid)
         hr(60)
 
     def isClosure(self, tasks, closure):
@@ -152,12 +151,12 @@ class BeakerInterface(object):
                     self.hostname = self.jobHostName()
                     if self.hostname != None:
                         f = open("hostname", "w")
-                        stderr("")
-                        stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
+                        print_stderr("")
+                        print_stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
                         message = "|ASSIGNED HOSTNAME:\n|  %s|" % self.hostname
-                        stderr("|%s|" % message)
+                        print_stderr("|%s|" % message)
                         hr(len(self.hostname)+2)
-                        stderr("")
+                        print_stderr("")
                         f.write("%s\n" % self.hostname)
                         f.close()
                 tasks = newtasks
@@ -795,7 +794,7 @@ def main(argv):
         if command == "load":
             # Load json file
             try:
-                stderr("Loading JSON file ...")
+                print_stderr("Loading JSON file ...")
                 builder = BeakerJSONBuilder(argv.pop())
                 job = builder.getJob()
             except IndexError:
@@ -830,7 +829,7 @@ def main(argv):
                 raise Exception("You must load the JSON file at first!")
         elif command == "submit-watch":
             # Submit and watch job
-            stderr("Submitting job into Beaker ...")
+            print_stderr("Submitting job into Beaker ...")
             try:
                 app = BeakerJobSubmitApplication(username, password, job, closure)
             except AssertionError:

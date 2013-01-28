@@ -36,6 +36,9 @@ class RuntimeErrorException(Exception):
 class InvalidXMLException(Exception):
     pass
 
+class TaskFailedException(Exception):
+    pass
+
 class BeakerInterface(object):
     def __init__(self):
         self.user = None
@@ -136,6 +139,13 @@ class BeakerInterface(object):
                     return True
         return False
 
+    def isFailed(self, tasks):
+        for task in tasks:
+            # Check for failed tasks
+            if task[1] in ["Failed"]:
+                raise TaskFailedException("Task %s failed!" % task[0])
+        
+
     def isCancelled(self, tasks):
         for task in tasks:
             if task[1] == "Cancelled":
@@ -147,7 +157,7 @@ class BeakerInterface(object):
         self.jobDownload(jobid)
         tasks = self.formatTasks(self.jobTasks())
         self.printTasks(tasks)
-        while not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
+        while not self.isClosure(tasks, closure) and not self.isCancelled(tasks) and not self.isFailed(tasks):
             sleep(30)
             self.jobDownload(jobid)
             newtasks = self.formatTasks(self.jobTasks())

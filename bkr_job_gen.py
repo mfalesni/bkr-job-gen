@@ -144,6 +144,7 @@ class BeakerInterface(object):
             # Check for failed tasks
             if task[1] in ["Failed"]:
                 raise TaskFailedException("Task %s failed!" % task[0])
+        return False
         
 
     def isCancelled(self, tasks):
@@ -157,7 +158,7 @@ class BeakerInterface(object):
         self.jobDownload(jobid)
         tasks = self.formatTasks(self.jobTasks())
         self.printTasks(tasks)
-        while not self.isClosure(tasks, closure) and not self.isCancelled(tasks) and not self.isFailed(tasks):
+        while not self.isFailed(tasks) and not self.isClosure(tasks, closure) and not self.isCancelled(tasks):
             sleep(30)
             self.jobDownload(jobid)
             newtasks = self.formatTasks(self.jobTasks())

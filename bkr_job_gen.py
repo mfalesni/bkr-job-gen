@@ -185,7 +185,7 @@ class Application(object):
         return name
 
 
-class BeakerJobSubmitApplication(Application):
+class BeakerJobSubmitWatchApplication(Application):
     def __init__(self, name, password, xml, closure):
         assert xml != None
         xmlfile = self.tmpFileName()
@@ -198,6 +198,24 @@ class BeakerJobSubmitApplication(Application):
         os.unlink(xmlfile)
         #TODO: More jobs simultaneously
         self.result = ifc.monitorTasks(jobs[0], closure)
+
+class BeakerJobSubmitApplication(Application):
+    def __init__(self, name, password, xml, closure):
+        assert xml != None
+        xmlfile = self.tmpFileName()
+        f = open(xmlfile, "w")
+        f.write(xml.xmlRepresentation())
+        f.close()
+        ifc = BeakerInterface()
+        ifc.setCredentials(name, password)
+        jobs = ifc.jobSubmit(xmlfile)
+        os.unlink(xmlfile)
+
+class BeakerJobWatchApplication(Application):
+    def __init__(self, name, password, jobid, closure):
+        ifc = BeakerInterface()
+        ifc.setCredentials(name, password)
+        self.result = ifc.monitorTasks(jobid, closure)
 
 # XML GENERATOR
 
@@ -837,9 +855,28 @@ def main(argv):
             # Submit and watch job
             print_stderr("Submitting job into Beaker ...")
             try:
+                app = BeakerJobSubmitWatchApplication(username, password, job, closure)
+            except AssertionError:
+                raise Exception("You must load JSON at first!")
+        elif command == "submit":
+            # Submit and watch job
+            print_stderr("Submitting job into Beaker ...")
+            try:
                 app = BeakerJobSubmitApplication(username, password, job, closure)
             except AssertionError:
                 raise Exception("You must load JSON at first!")
+        elif command == "watch":
+            # Submit and watch job
+            try:
+                jobid = int(argv.pop())
+            except IndexError:
+                raise Exception("You must specify a job ID!")
+            except ValueError:
+                raise Exception("Job ID must be a number!")
+            print_stderr("Watching job in Beaker ...")
+            if closure is None:
+                raise Exception("A closure must be defined!")
+            app = BeakerJobWatchApplication(username, password, jobid, closure)
         elif command == "print":
             try:
                 print job.xmlRepresentation()

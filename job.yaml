@@ -1,0 +1,24 @@
+recipes:
+- autopick: 'false'
+  distro:
+  - and:
+    - name: =RHEL-6.3
+    - arch: =x86_64
+    - variant: =Server
+  host:
+    hostname: =somehost.name.com
+  ks_meta: method_nfs
+  tasks:
+  - name: /distribution/install
+  - name: /some/nice/task
+    params:
+      CUSTOM_REPOS: somerepo1 somerepo2
+      PARAM1: value1
+      SOME_HOSTNAME: some.host.name.eu
+      YUM_RELEASEVER: '6.3'
+  - name: /distribution/reservesys
+    params:
+      RESERVETIME: 7d
+  - name: /some/next/nice/task
+  watchdog: None
+whiteboard: Sample job using bkr_job_gen

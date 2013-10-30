@@ -10,17 +10,16 @@ import sys
 from StringIO import StringIO
 import subprocess
 import shlex
-import pkg_resources
-import sys
 import os
 import os.path
-from StringIO import StringIO
 from random import random
 from lxml.etree import *
 from time import sleep, strftime, localtime
 
+
 def print_stderr(string):
     sys.stderr.write("%s\n" % string)
+
 
 def hr(length):
     sys.stderr.write("+")
@@ -28,16 +27,19 @@ def hr(length):
         sys.stderr.write("~")
     sys.stderr.write("+\n")
 
-# XML SUBMITTER
 
+# XML SUBMITTER
 class RuntimeErrorException(Exception):
     pass
+
 
 class InvalidXMLException(Exception):
     pass
 
+
 class TaskFailedException(Exception):
     pass
+
 
 class BeakerInterface(object):
     def __init__(self):
@@ -45,7 +47,7 @@ class BeakerInterface(object):
         self.password = None
         self.jobtree = None
         self.hostname = None
-        
+
     def __run(self, cmd):
         if isinstance(cmd, str):
             cmd = shlex.split(cmd)
@@ -61,16 +63,18 @@ class BeakerInterface(object):
     def setCredentials(self, user, password):
         self.user = user
         self.password = password
-        if not (self.user == None or self.password == False):
+        if not (self.user is None or not self.password):
             print_stderr("Username: %s" % self.user)
             print_stderr("Password: %s" % self.password)
-        
 
     def jobSubmit(self, jobxmlfile):
-        if self.user == None or self.password == None:
+        if self.user is None or self.password is None:
             result = self.__run("bkr job-submit %s" % (jobxmlfile))
         else:
-            result = self.__run("bkr job-submit %s --username '%s' --password '%s'" % (jobxmlfile, self.user, self.password))
+            result = self.__run("bkr job-submit %s --username '%s' --password '%s'" % (jobxmlfile,
+                                                                                       self.user,
+                                                                                       self.password
+                                                                                       ))
         result = result.split(":", 1)[-1].strip()
         result = eval(result)
         result = [int(x.rsplit(":", 1)[-1]) for x in result]
@@ -83,8 +87,8 @@ class BeakerInterface(object):
         try:
             self.jobtree = parse(StringIO(stdout))
         except XMLSyntaxError:
-            raise RuntimeErrorException("Parsing of the received XML failed. Content of the xml is: '%s'" % stdout)
-
+            raise RuntimeErrorException("Parsing of the received XML failed." +
+                                        " Content of the xml is: '%s'" % stdout)
 
     def jobTasks(self):
         return self.jobtree.xpath("//task")
@@ -121,7 +125,6 @@ class BeakerInterface(object):
         for task in tasks:
             print_stderr(fmtstr % (task[0].rjust(longest), task[1].rjust(constant_size), task[2].rjust(constant_size)))
         hr(total+2)
-        
 
     def formatTasks(self, xmltasks):
         return [(xmltask.get("name"), xmltask.get("status"), xmltask.get("result")) for xmltask in xmltasks]
@@ -135,7 +138,7 @@ class BeakerInterface(object):
     def isClosure(self, tasks, closure):
         for task in tasks:
             if task[0] == closure:
-                if task[1] in  ["Running", "Failed", "Completed"]:
+                if task[1] in ["Running", "Failed", "Completed"]:
                     return True
         return False
 
@@ -145,7 +148,6 @@ class BeakerInterface(object):
             if task[1] in ["Failed"]:
                 raise TaskFailedException("Task %s failed!" % task[0])
         return False
-        
 
     def isCancelled(self, tasks):
         for task in tasks:
@@ -164,9 +166,9 @@ class BeakerInterface(object):
             newtasks = self.formatTasks(self.jobTasks())
             if self.tasksDiffer(tasks, newtasks):
                 self.printTasks(newtasks)
-                if self.hostname == None:
+                if self.hostname is None:
                     self.hostname = self.jobHostName()
-                    if self.hostname != None:
+                    if self.hostname is not None:
                         f = open("hostname", "w")
                         print_stderr("")
                         print_stderr("%s:" % strftime("%Y-%m-%d %H:%M:%S", localtime()))
@@ -184,6 +186,7 @@ class BeakerInterface(object):
         else:
             return True
 
+
 class Application(object):
     def random(self):
         return int(random()*10000)
@@ -198,7 +201,7 @@ class Application(object):
 
 class BeakerJobSubmitWatchApplication(Application):
     def __init__(self, name, password, xml, closure):
-        assert xml != None
+        assert xml is not None
         xmlfile = self.tmpFileName()
         f = open(xmlfile, "w")
         f.write(xml.xmlRepresentation())
@@ -210,9 +213,10 @@ class BeakerJobSubmitWatchApplication(Application):
         #TODO: More jobs simultaneously
         self.result = ifc.monitorTasks(jobs[0], closure)
 
+
 class BeakerJobSubmitApplication(Application):
     def __init__(self, name, password, xml, closure):
-        assert xml != None
+        assert xml is not None
         xmlfile = self.tmpFileName()
         f = open(xmlfile, "w")
         f.write(xml.xmlRepresentation())
@@ -222,14 +226,15 @@ class BeakerJobSubmitApplication(Application):
         jobs = ifc.jobSubmit(xmlfile)
         os.unlink(xmlfile)
 
+
 class BeakerJobWatchApplication(Application):
     def __init__(self, name, password, jobid, closure):
         ifc = BeakerInterface()
         ifc.setCredentials(name, password)
         self.result = ifc.monitorTasks(jobid, closure)
 
-# XML GENERATOR
 
+# XML GENERATOR
 class UnknownHostRequirementException(Exception):
     def __init__(self, req):
         self.req = req
@@ -237,21 +242,26 @@ class UnknownHostRequirementException(Exception):
     def __repr__(self):
         return str(self.req)
 
+
 class UnknownOperatorException(Exception):
     def __init__(self, req):
         self.req = req
+
 
 class UnknownPanicException(Exception):
     def __init__(self, req):
         self.req = req
 
+
 class UnknownPickException(Exception):
     def __init__(self, req):
         self.req = req
 
+
 class UnknownPriorityException(Exception):
     def __init__(self, req):
         self.req = req
+
 
 class BeakerBaseObject(object):
     def setValue(self, key, value):
@@ -285,6 +295,7 @@ class BeakerRecipeTask(BeakerBaseObject):
         task.append(params)
         return task
 
+
 class BeakerRecipeTaskParam(BeakerBaseObject):
     """ This class represents one parameter for Beaker task """
 
@@ -298,11 +309,12 @@ class BeakerRecipeTaskParam(BeakerBaseObject):
         param.set("value", self.value)
         return param
 
+
 class BeakerAnd(BeakerBaseObject):
     """ Makes <and> tag """
 
     def __init__(self, child_nodes=None):
-        if child_nodes != None:
+        if child_nodes is not None:
             self.child_nodes = child_nodes
         else:
             self.child_nodes = []
@@ -319,11 +331,12 @@ class BeakerAnd(BeakerBaseObject):
             and_element.append(child.toXMLNode())
         return and_element
 
+
 class BeakerOr(BeakerBaseObject):
     """ Makes <or> tag """
 
     def __init__(self, child_nodes=None):
-        if child_nodes != None:
+        if child_nodes is not None:
             self.child_nodes = child_nodes
         else:
             self.child_nodes = []
@@ -340,11 +353,13 @@ class BeakerOr(BeakerBaseObject):
             or_element.append(child.toXMLNode())
         return or_element
 
+
 class BeakerRecipeHostRequirement(BeakerBaseObject):
     """ Does child tags inside <hostRequires> tag """
     allowedReqs = ["hostname", "host", "hostlabcontroller", "system_type", "system", "memory", "cpu_count", "numa_node_count", "arch", "auto_prov", "hypervisor", "device"]
     allowedOps = ["=", "<", ">", "<=", ">=", None]
     reOp = re.compile("^[<>=]+")
+
     def __init__(self, requirement, value):
         self.keyvalue = False
         self.setReq(requirement, value)
@@ -359,7 +374,7 @@ class BeakerRecipeHostRequirement(BeakerBaseObject):
                 raise UnknownHostRequirementException(requirement)
         self.req = requirement
         findOp = self.reOp.search(value)
-        if findOp == None:
+        if findOp is None:
             self.operator = findOp
             self.value = value
         else:
@@ -375,19 +390,21 @@ class BeakerRecipeHostRequirement(BeakerBaseObject):
         else:
             requirement = Element("key_value")
             requirement.set("key", self.req)
-        if self.operator != None:
+        if self.operator is not None:
             requirement.set("op", self.operator)
         requirement.set("value", self.value)
         return requirement
+
 
 class BeakerRecipeDistroRequirement(BeakerBaseObject):
     """ Does child tags inside <distroRequires> tag """
     allowedReqs = ["distro", "distro_family", "distro_name", "distro_tag", "distro_variant", "distro_arch", "distro_virt", "distro_method", "distrolabcontroller"]
     allowedOps = ["=", "<", ">", "<=", ">=", None]
     reOp = re.compile("^[<>=]+")
+
     def __init__(self, requirement, value):
         self.setReq(requirement, value)
-        
+
     def setReq(self, requirement, value):
         if not requirement.startswith("distro_"):
             requirement = "distro_%s" % requirement
@@ -397,7 +414,7 @@ class BeakerRecipeDistroRequirement(BeakerBaseObject):
             raise UnknownHostRequirementException(requirement)
         self.req = requirement
         findOp = self.reOp.search(value)
-        if findOp == None:
+        if findOp is None:
             self.operator = findOp
             self.value = value
         else:
@@ -405,13 +422,14 @@ class BeakerRecipeDistroRequirement(BeakerBaseObject):
             self.value = value[findOp.end():]
         if self.operator not in self.allowedOps:
             raise UnknownOperatorException(self.operator)
- 
+
     def toXMLNode(self):
         requirement = Element(self.req)
-        if self.operator != None:
+        if self.operator is not None:
             requirement.set("op", self.operator)
         requirement.set("value", self.value)
         return requirement
+
 
 class BeakerRecipeHostRequires(BeakerBaseObject):
     """ <hostRequires> """
@@ -431,6 +449,7 @@ class BeakerRecipeHostRequires(BeakerBaseObject):
             requires.append(child.toXMLNode())
         return requires
 
+
 class BeakerRecipeDistroRequires(BeakerBaseObject):
     """ <distroRequires> """
 
@@ -449,6 +468,7 @@ class BeakerRecipeDistroRequires(BeakerBaseObject):
             requires.append(child.toXMLNode())
         return requires
 
+
 class BeakerUnimplementedTag(BeakerBaseObject):
     """ When some tag is not implemented """
 
@@ -458,30 +478,36 @@ class BeakerUnimplementedTag(BeakerBaseObject):
     def toXMLNode(self):
         return Element(self.tag)
 
+
 class BeakerRecipePartitions(BeakerUnimplementedTag):
     """ <repos> tag """
     def __init__(self):
         self.tag = "partitions"
+
 
 class BeakerRecipeRepos(BeakerUnimplementedTag):
     """ <repos> tag """
     def __init__(self):
         self.tag = "repos"
 
+
 class BeakerRecipeKsAppends(BeakerUnimplementedTag):
     """ <ks_appends> tag """
     def __init__(self):
         self.tag = "ks_appends"
+
 
 class BeakerRecipePackages(BeakerUnimplementedTag):
     """ <repos> tag """
     def __init__(self):
         self.tag = "packages"
 
+
 class BeakerRecipeWatchdog(BeakerBaseObject):
     """ <watchdog> tag """
 
     allowedPanic = ["None", "ignore"]
+
     def __init__(self, panic):
         if panic not in self.allowedPanic:
             raise UnknownPanicException
@@ -492,10 +518,12 @@ class BeakerRecipeWatchdog(BeakerBaseObject):
         watchdog.set("panic", self.panic)
         return watchdog
 
+
 class BeakerRecipeAutopick(BeakerBaseObject):
     """ <autopick> tag """
 
     allowedPick = ["TRUE", "FALSE"]
+
     def __init__(self, random):
         if random.upper() not in self.allowedPick:
             raise UnknownPanicException
@@ -505,6 +533,7 @@ class BeakerRecipeAutopick(BeakerBaseObject):
         autopick = Element("autopick")
         autopick.set("random", self.random)
         return autopick
+
 
 class BeakerRecipeKickstart(BeakerBaseObject):
     """ <kickstart> tag """
@@ -518,10 +547,12 @@ class BeakerRecipeKickstart(BeakerBaseObject):
         #kickstart.text = self.kickstart
         return kickstart
 
+
 class BeakerRecipe(BeakerBaseObject):
     """ <recipe> tag """
 
-    def __init__(self, kernel_options="", kernel_options_post="", ks_meta="method=nfs", role="None", whiteboard="", kickstart=None):
+    def __init__(self, kernel_options="", kernel_options_post="", ks_meta="method=nfs",
+                 role="None", whiteboard="", kickstart=None):
         self.kernel_options = kernel_options
         self.kernel_options_post = kernel_options_post
         self.ks_meta = ks_meta
@@ -586,7 +617,7 @@ class BeakerRecipe(BeakerBaseObject):
         recipe.set("ks_meta", self.ks_meta)
         recipe.set("role", self.role)
         recipe.set("whiteboard", self.whiteboard)
-        if self.kickstart != None:
+        if self.kickstart is not None:
             recipe.append(self.kickstart.toXMLNode())
         recipe.append(self.autopick.toXMLNode())
         recipe.append(self.watchdog.toXMLNode())
@@ -600,16 +631,21 @@ class BeakerRecipe(BeakerBaseObject):
             recipe.append(task.toXMLNode())
         return recipe
 
+
 class BeakerRecipeSet(BeakerBaseObject):
     """ <recipeSet> tag """
 
     allowedPriorities = ["High", "Low"]
-    def __init__(self, priority="High", recipes=[]):
+
+    def __init__(self, priority="High", recipes=None):
         if priority.title() not in self.allowedPriorities:
             raise UnknownPriorityException
         self.priority = priority.title()
-        self.recipes = recipes
-    
+        if recipes is None:
+            self.recipes = []
+        else:
+            self.recipes = recipes
+
     def addRecipes(self, recipe):
         if type(recipe) != list:
             self.recipes.append(recipe)
@@ -623,19 +659,25 @@ class BeakerRecipeSet(BeakerBaseObject):
             recipeset.append(recipe.toXMLNode())
         return recipeset
 
+
 class BeakerJob(BeakerBaseObject):
     """ <job> tag """
 
-    def __init__(self, whiteboard="Default name", retention_tag="scratch", product=None, recipeset=BeakerRecipeSet()):
+    def __init__(self, whiteboard="Default name",
+                 retention_tag="scratch", product=None,
+                 recipeset=None):
         self.retention_tag = retention_tag
         self.product = product
         self.whiteboard = whiteboard
-        self.recipeset = recipeset
+        if recipeset is None:
+            self.recipeset = BeakerRecipeSet()
+        else:
+            self.recipeset = recipeset
 
     def toXMLNode(self):
         job = Element("job")
         job.set("retention_tag", self.retention_tag)
-        if self.product != None:
+        if self.product is not None:
             job.set("product", self.product)
         whiteboard = Element("whiteboard")
         whiteboard.text = self.whiteboard
@@ -670,8 +712,9 @@ class BeakerJob(BeakerBaseObject):
 
                 task_num += 1
             summary += "  |\n  ^\n"
-            recipe_num +=1
+            recipe_num += 1
         return summary
+
 
 class BeakerJSONBuilder(object):
     """ Builds the tree from XML file or string """
@@ -683,7 +726,7 @@ class BeakerJSONBuilder(object):
         self.buildStart()
 
     def callFunc(self, funcpostfix, data):
-        return self.__getattribute__("buildRecipeset%s" % funcpostfix )(data)
+        return self.__getattribute__("buildRecipeset%s" % funcpostfix)(data)
 
     def getJob(self):
         return self.job
@@ -721,12 +764,12 @@ class BeakerJSONBuilder(object):
         result_tasks = []
         for task in tasks:
             taskObject = BeakerRecipeTask(task["name"])
-            if "params" in task:    
+            if "params" in task:
                 for param in task["params"]:
                     taskObject.addParam(param, task["params"][param])
-            result_tasks.append(taskObject)    
+            result_tasks.append(taskObject)
         return result_tasks
-    
+
     def buildRecipesetDistro(self, data):
         distro_req = BeakerRecipeDistroRequires()
         if type(data) != list:
@@ -748,7 +791,6 @@ class BeakerJSONBuilder(object):
                     distro_req.addRequirement(self.buildRecipesetDistroRequirement(item))
             else:
                 raise Exception("Unknown JSON tag %s" % str(type(item)))
-            
         return distro_req
 
     def buildRecipesetHost(self, data):
@@ -772,7 +814,6 @@ class BeakerJSONBuilder(object):
                     host_req.addRequirement(self.buildRecipesetHostRequirement(item))
             else:
                 raise Exception("Unknown JSON tag %s" % str(type(item)))
-            
         return host_req
 
     def buildRecipesetAnd(self, data, kind):
@@ -817,7 +858,8 @@ class BeakerJSONBuilder(object):
 def main(argv):
     argv.reverse()
     # Priklady:
-    # ./bkr_job_gen.py load job.json task "/CloudForms/Installation/CloudEngine" param set "YUM_RELEASEVER" "6.2" param delete CF_CUSTOM_REPOS print
+    # ./bkr_job_gen.py load job.json task "/CloudForms/Installation/CloudEngine"
+    # param set "YUM_RELEASEVER" "6.2" param delete CF_CUSTOM_REPOS print
     job = None
     currentRecipe = 0
     currentTask = None
@@ -979,7 +1021,7 @@ def main(argv):
                     if p.name == paramname:
                         param = p
                         break
-                if param == None:
+                if param is None:
                     param = BeakerRecipeTaskParam(paramname, paramvalue)
                     currentTask.params.append(param)
                 else:

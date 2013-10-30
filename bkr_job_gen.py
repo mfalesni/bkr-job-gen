@@ -12,6 +12,10 @@ import subprocess
 import shlex
 import os
 import os.path
+try:
+    import yaml
+except ImportError:
+    pass
 from random import random
 from lxml.etree import *
 from time import sleep, strftime, localtime
@@ -716,13 +720,11 @@ class BeakerJob(BeakerBaseObject):
         return summary
 
 
-class BeakerJSONBuilder(object):
+class BeakerBuilder(object):
     """ Builds the tree from XML file or string """
 
     def __init__(self, data):
-        f = open(data, "r")
-        self.data = json.loads(f.read())
-        f.close()
+        self.data = data
         self.buildStart()
 
     def callFunc(self, funcpostfix, data):
@@ -871,8 +873,22 @@ def main(argv):
         if command == "load":
             # Load json file
             try:
-                print_stderr("Loading JSON file ...")
-                builder = BeakerJSONBuilder(argv.pop())
+                filename = argv.pop()
+                extension = filename.rsplit(".", 1)[-1].strip()
+                data = None
+                if extension in ["js", "json"]:
+                    print_stderr("Loading JSON file ...")
+                    with open(filename, "r") as inputf:
+                        data = json.load(inputf)
+                elif extension in ["yml", "yaml"]:
+                    try:
+                        yaml
+                    except NameError:
+                        raise Exception("You must install PyYAML to use the YAML support!")
+                    print_stderr("Loading YAML file ...")
+                    with open(filename, "r") as inputf:
+                        data = yaml.safe_load(inputf)
+                builder = BeakerBuilder(data)
                 job = builder.getJob()
             except IndexError:
                 raise Exception("You must provide file name to import!")
